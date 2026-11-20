@@ -1,0 +1,39 @@
+[service]
+mode = "local"
+database = ".local/data/messages.sqlite3"
+credentials_directory = ".local/credentials"
+resource_uri = "http://127.0.0.1:8765/mcp"
+cursor_credential = "cursor-key"
+encryption_credential = "encryption-key"
+admin_credential = "admin-password"
+message_retention_days = 7
+
+[limits]
+send_per_minute = 30
+tools_per_minute = 120
+
+[[agents]]
+id = "agent_a"
+address = "assistant-a@example.test"
+label = "Assistant A"
+mode = "mcp_event"
+principal = "agent_a"
+
+[[agents]]
+id = "agent_b"
+address = "assistant-b@example.test"
+label = "Assistant B"
+mode = "webhook"
+principal = "agent_b"
+
+[[agents]]
+id = "agent_c"
+address = "assistant-c@example.test"
+label = "Assistant C"
+mode = "webhook"
+principal = "agent_c"
+
+[local_tokens]
+agent_a = "agent_a-token"
+agent_b = "agent_b-token"
+agent_c = "agent_c-token"

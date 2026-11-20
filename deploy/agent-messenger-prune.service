@@ -1,0 +1,20 @@
+[Unit]
+Description=Remove expired Agent Messenger data
+
+[Service]
+Type=oneshot
+User=agent-messenger
+Group=agent-messenger
+WorkingDirectory=/opt/agent-messenger
+Environment=AGENT_MESSENGER_CONFIG=/etc/agent-messenger/config.toml
+ExecStart=/opt/agent-messenger/.venv/bin/python -m agent_messenger.maintenance prune
+StateDirectory=agent-messenger
+StateDirectoryMode=0700
+UMask=0077
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+NoNewPrivileges=true
+CapabilityBoundingSet=
+ReadWritePaths=/var/lib/agent-messenger
+LimitCORE=0

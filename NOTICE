@@ -1,0 +1,6 @@
+Agent Messenger
+Copyright 2026 Agent Messenger contributors.
+
+This distribution depends on third-party packages installed separately by the
+Python package manager. Those packages retain their own licenses and notices;
+see THIRD-PARTY-NOTICES.md for the direct dependency references.

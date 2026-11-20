@@ -1,0 +1,101 @@
+:root {
+  color-scheme: light;
+  --canvas: #f5f6f4;
+  --surface: #fff;
+  --text: #182421;
+  --muted: #687772;
+  --line: #e1e7e3;
+  --accent: #20684f;
+  --accent-soft: #eaf4ef;
+  --blue: #315f9a;
+  --blue-soft: #edf4ff;
+  --neutral: #5d6b66;
+  --neutral-soft: #eef1ef;
+  --amber: #91600a;
+  --amber-soft: #fff4da;
+  --red: #a13b31;
+  --red-soft: #fff0ed;
+  font: 15px/1.55 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--canvas);
+  color: var(--text);
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--canvas); color: var(--text); }
+main { max-width: 76rem; margin: auto; padding: 1.25rem clamp(1rem, 4vw, 3rem) 4rem; }
+a { color: var(--accent); text-underline-offset: .2em; }
+a:hover { color: #154b38; }
+header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-bottom: 1px solid var(--line); padding: .25rem 0 1rem; }
+.brand { color: var(--text); font-weight: 750; letter-spacing: -.025em; text-decoration: none; }
+header > a:last-child { font-size: .9rem; }
+h1, h2, h3, p { margin-top: 0; }
+h1 { margin-bottom: .45rem; font-size: clamp(1.8rem, 4vw, 2.5rem); letter-spacing: -.045em; line-height: 1.12; }
+h2 { margin-bottom: 0; font-size: 1.05rem; letter-spacing: -.02em; }
+h3 { font-size: .9rem; }
+.page-intro { margin: 2.2rem 0 1.8rem; }
+.eyebrow { margin-bottom: .35rem; color: var(--muted); font-size: .72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.intro-copy { margin: 0; color: var(--muted); }
+.agent-section { margin-bottom: 2rem; }
+.section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: .8rem; }
+.agents { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .8rem; }
+.agent-card, aside, .threads li { min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: .9rem; }
+.agent-card { padding: 1rem 1.1rem .8rem; }
+.agent-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: .75rem; }
+.agent-heading h2 { margin-bottom: 0; }
+.agent-address { margin: .35rem 0 .9rem; color: var(--muted); font-size: .85rem; overflow-wrap: anywhere; }
+.agent-activity { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; margin: 0; padding-top: .7rem; border-top: 1px solid var(--line); }
+.agent-activity dt, dt { color: var(--muted); font-size: .76rem; }
+.agent-activity dd { margin: .1rem 0 0; font-size: .82rem; font-weight: 600; }
+.agent-state { display: grid; gap: .55rem; margin: 0 0 .75rem; }
+.agent-state > div { display: grid; grid-template-columns: 7.1rem minmax(0, 1fr); align-items: start; gap: .45rem; }
+.agent-state dd { min-width: 0; margin: 0; }
+.columns { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(15rem, .8fr); gap: 1.1rem; align-items: start; }
+.threads, .diagnostic { display: grid; gap: .65rem; margin: 0; padding: 0; list-style: none; }
+.conversation, .message-card { padding: 1rem 1.1rem; }
+.conversation-heading, .message-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+.conversation-heading > a { font-weight: 700; text-decoration: none; }
+.conversation-heading time, time { flex: 0 0 auto; color: var(--muted); font-size: .8rem; }
+.meta { color: var(--muted); font-size: .84rem; }
+.conversation .meta { margin: .25rem 0 .5rem; }
+.preview, .message { margin-bottom: .7rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.badge-row { display: flex; flex-wrap: wrap; gap: .35rem; }
+.badge { display: inline-flex; align-items: center; gap: .35rem; width: fit-content; max-width: 100%; border-radius: 999px; padding: .15rem .55rem; font-size: .74rem; font-weight: 650; line-height: 1.45; white-space: normal; }
+.badge::before { width: .4rem; height: .4rem; border-radius: 50%; background: currentColor; content: ""; }
+.badge.neutral { background: var(--neutral-soft); color: var(--neutral); }
+.badge.info { background: var(--blue-soft); color: var(--blue); }
+.badge.success { background: var(--accent-soft); color: var(--accent); }
+.badge.pending { background: var(--amber-soft); color: var(--amber); }
+.badge.error { background: var(--red-soft); color: var(--red); }
+.status-detail { display: inline-block; margin-left: .3rem; color: var(--muted); font-size: .72rem; overflow-wrap: anywhere; }
+aside { padding: 1.1rem; }
+aside h2 { margin-bottom: .35rem; }
+.summary { margin: 1rem 0; }
+.summary > div { display: flex; align-items: baseline; justify-content: space-between; gap: .7rem; padding: .5rem 0; border-top: 1px solid var(--line); }
+.summary dt { max-width: 70%; }
+.summary dd { margin: 0; font-weight: 700; text-align: right; }
+.subheading { margin: 1.25rem 0 .45rem; }
+.diagnostic li { display: flex; align-items: flex-start; justify-content: space-between; gap: .45rem; flex-wrap: wrap; padding: .4rem 0; border-top: 1px solid var(--line); font-size: .83rem; }
+.diagnostic li > span:last-child { min-width: 0; }
+.empty-state { padding: 1.1rem; color: var(--muted); }
+.back-link { margin: 1.5rem 0 0; }
+.message-list { margin-top: 1.25rem; }
+.message-heading { align-items: center; }
+.message-heading .eyebrow { margin-bottom: .1rem; }
+.message-heading strong { overflow-wrap: anywhere; }
+.message-card .message { margin: 1rem 0; font-size: 1rem; }
+.message-footer { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; border-top: 1px solid var(--line); padding-top: .65rem; }
+.message-footer p { margin: 0; font-size: .82rem; }
+.message-footer .meta { overflow-wrap: anywhere; }
+@media (max-width: 54rem) { .agents { grid-template-columns: 1fr 1fr; } .columns { grid-template-columns: 1fr; } }
+@media (max-width: 38rem) {
+  :root { font-size: 14px; }
+  main { padding: .9rem 1rem 2rem; }
+  .page-intro { margin: 1.6rem 0 1.4rem; }
+  .agents { grid-template-columns: 1fr; }
+  .agent-card { padding: .9rem; }
+  .agent-activity { grid-template-columns: 1fr 1fr; }
+  .agent-state > div { grid-template-columns: 6.6rem minmax(0, 1fr); }
+  .section-heading { align-items: flex-start; flex-direction: column; gap: .1rem; }
+  .conversation, .message-card { padding: .9rem; }
+  .conversation-heading, .message-heading { align-items: flex-start; }
+  .conversation-heading { flex-direction: column; gap: .2rem; }
+}

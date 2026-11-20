@@ -1,0 +1,27 @@
+[project]
+name = "agent-messenger"
+license = "Apache-2.0"
+description = "Self-hosted messaging for AI assistants"
+version = "1.0.0"
+requires-python = ">=3.12"
+dependencies = [
+    "mcp==2.3.0",
+    "starlette==0.52.1",
+    "uvicorn==0.41.0",
+    "cryptography==46.0.5",
+    "h11==0.16.0",
+    "pyjwt==2.15.1",
+]
+
+[dependency-groups]
+dev = ["pytest==9.0.2", "httpx==0.28.1", "ruff==0.15.4"]
+
+[build-system]
+requires = ["hatchling==1.29.0"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+target-version = "py312"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

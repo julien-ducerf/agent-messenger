@@ -1,0 +1,37 @@
+[Unit]
+Description=Agent Messenger
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=agent-messenger
+Group=agent-messenger
+WorkingDirectory=/opt/agent-messenger
+Environment=AGENT_MESSENGER_CONFIG=/etc/agent-messenger/config.toml
+LoadCredential=cursor-key:/etc/agent-messenger/credentials/cursor-key
+LoadCredential=encryption-key:/etc/agent-messenger/credentials/encryption-key
+LoadCredential=proxy-oauth-public-key.pem:/etc/agent-messenger/credentials/proxy-oauth-public-key.pem
+LoadCredential=proxy-channel-key:/etc/agent-messenger/credentials/proxy-channel-key
+LoadCredential=proxy-introspection-client:/etc/agent-messenger/credentials/proxy-introspection-client
+LoadCredential=admin-password:/etc/agent-messenger/credentials/admin-password
+# Add LoadCredential entries for each enabled webhook's URL, secret and optional bearer.
+ExecStartPre=/opt/agent-messenger/.venv/bin/python -m agent_messenger.maintenance init
+ExecStart=/opt/agent-messenger/.venv/bin/uvicorn agent_messenger.app:create_app --factory --host 127.0.0.1 --port 8765 --workers 1 --no-proxy-headers --no-access-log --limit-concurrency 64
+Restart=on-failure
+RestartSec=4
+StateDirectory=agent-messenger
+StateDirectoryMode=0700
+UMask=0077
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+NoNewPrivileges=true
+CapabilityBoundingSet=
+ReadWritePaths=/var/lib/agent-messenger
+LimitCORE=0
+MemoryMax=256M
+TasksMax=64
+
+[Install]
+WantedBy=multi-user.target

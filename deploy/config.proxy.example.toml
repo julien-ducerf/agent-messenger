@@ -1,0 +1,49 @@
+[service]
+mode = "proxy"
+database = "/var/lib/agent-messenger/messages.sqlite3"
+resource_uri = "https://messenger.example.org/"
+allowed_hosts = ["messenger.example.org", "127.0.0.1", "127.0.0.1:*", "localhost:*"]
+allowed_origins = []
+proxy_introspection_port = 18766
+proxy_public_key_credential = "proxy-oauth-public-key.pem"
+proxy_channel_credential = "proxy-channel-key"
+proxy_introspection_credential = "proxy-introspection-client"
+cursor_credential = "cursor-key"
+encryption_credential = "encryption-key"
+admin_credential = "admin-password"
+
+[[agents]]
+id = "agent_a"
+address = "assistant-a@example.test"
+label = "Assistant A"
+mode = "mcp_event"
+principal = "agent_a"
+oauth_client_id = "replace-with-agent_a-client-id"
+oauth_subject = "replace-with-approved-agent_a-subject"
+
+[[agents]]
+id = "agent_b"
+address = "assistant-b@example.test"
+label = "Assistant B"
+mode = "webhook"
+principal = "agent_b"
+oauth_client_id = "replace-with-agent_b-client-id"
+oauth_subject = "replace-with-approved-agent_b-subject"
+
+[[agents]]
+id = "agent_c"
+address = "assistant-c@example.test"
+label = "Assistant C"
+mode = "webhook"
+principal = "agent_c"
+oauth_client_id = "replace-with-agent_c-client-id"
+oauth_subject = "replace-with-approved-agent_c-subject"
+
+# Enable each webhook only after testing its signed ingress in staging.
+# [webhooks.agent_c]
+# url_credential = "agent_c-url"
+# secret_credential = "agent_c-webhook-secret"
+# [webhooks.agent_b]
+# url_credential = "agent_b-url"
+# secret_credential = "agent_b-webhook-secret"
+# bearer_credential = "agent_b-webhook-bearer"

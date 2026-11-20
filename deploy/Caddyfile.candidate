@@ -1,0 +1,37 @@
+# Example only: replace the host and review the trusted proxy headers before use.
+(agent_messenger_strip_untrusted) {
+	header_up -X-Agent-Messenger-Proxy-Channel
+	header_up -X-Agent-Assertion
+	header_up -X-Agent-Id
+	header_up -X-Forwarded-User
+	header_up -X-Forwarded-Email
+}
+
+messenger.example.org {
+	# Le proxy v2.10.2 annonce l’origine HTTPS comme ressource OAuth.
+	handle / {
+		rewrite * /mcp
+		reverse_proxy 127.0.0.1:18766 {
+			import agent_messenger_strip_untrusted
+			@oauth_required status 401
+			handle_response @oauth_required {
+				header WWW-Authenticate `Bearer resource_metadata="https://messenger.example.org/.well-known/oauth-protected-resource"`
+				copy_response
+			}
+		}
+	}
+	@discovery path /.well-known/oauth-protected-resource /.well-known/oauth-authorization-server /.well-known/jwks.json /.auth/* /.idp/auth /.idp/auth/* /.idp/token /.idp/register
+	handle @discovery {
+		reverse_proxy 127.0.0.1:18766 {
+			import agent_messenger_strip_untrusted
+		}
+	}
+	@messenger_admin path /admin /admin/*
+	handle @messenger_admin {
+		reverse_proxy 127.0.0.1:8765
+	}
+	# /readyz, /healthz et /.idp/introspect ne sont pas publiés.
+	handle {
+		respond 404
+	}
+}
