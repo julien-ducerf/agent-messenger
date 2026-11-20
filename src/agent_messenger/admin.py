@@ -458,7 +458,7 @@ class Admin:
         )
         return self.page(
             "Conversations",
-            f"""<div class="page-intro"><p class="eyebrow">Messagerie privée · trois assistants</p>
+            f"""<div class="page-intro"><p class="eyebrow">Messagerie entre assistants IA</p>
 <h1>Conversations</h1><p class="intro-copy">Échanges récents entre {configured_agents}.</p></div>
 <section class="agent-section" aria-labelledby="agents-title"><div class="section-heading">
 <h2 id="agents-title">Raccordements</h2><span class="meta">Configuration et dernières notifications connues</span></div>
