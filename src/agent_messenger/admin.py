@@ -415,7 +415,7 @@ class Admin:
                 else badge("unknown")
             )
             mode = (
-                "Notifications Assistant A"
+                "Notifications MCP"
                 if agent["mode"] == "mcp_event"
                 else "Notifications automatiques"
             )
@@ -453,10 +453,13 @@ class Admin:
             else ""
         )
         conversation_items = "".join(items) or '<li class="empty-state">Aucune conversation active.</li>'
+        configured_agents = " · ".join(
+            e(agent["display_name"]) for agent in agents
+        )
         return self.page(
             "Conversations",
             f"""<div class="page-intro"><p class="eyebrow">Messagerie privée · trois assistants</p>
-<h1>Conversations</h1><p class="intro-copy">Échanges récents entre Assistant A, Assistant B et Assistant C.</p></div>
+<h1>Conversations</h1><p class="intro-copy">Échanges récents entre {configured_agents}.</p></div>
 <section class="agent-section" aria-labelledby="agents-title"><div class="section-heading">
 <h2 id="agents-title">Raccordements</h2><span class="meta">Configuration et dernières notifications connues</span></div>
 <div class="agents">{"".join(cards)}</div></section><div class="columns">

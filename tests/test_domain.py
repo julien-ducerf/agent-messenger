@@ -4,7 +4,9 @@ import pytest
 
 from agent_messenger.domain import DomainError, Messenger
 
-agent_b, agent_c, agent_a = (f"{agent}@example.test" for agent in ("agent_b", "agent_c", "agent_a"))
+agent_b, agent_c, agent_a = (
+    f"assistant-{agent[-1]}@example.test" for agent in ("agent_b", "agent_c", "agent_a")
+)
 
 
 def send(mailbox, key="one", text="hello", **arguments):

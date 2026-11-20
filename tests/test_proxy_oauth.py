@@ -96,7 +96,9 @@ def test_same_oauth_subject_with_three_distinct_client_ids(oauth):
     client, token, _ = oauth
     for agent in ("agent_a", "agent_b", "agent_c"):
         result = content(call(client, token(agent), headers=[("X-Agent-Id", "other")]))
-        assert result["addresses"][0]["address"] == f"{agent}@example.test"
+        assert (
+            result["addresses"][0]["address"] == f"assistant-{agent[-1]}@example.test"
+        )
     other = {"as_address": "assistant-c@example.test"}
     assert (
         content(call(client, token("agent_b"), name="check_messages", arguments=other))[

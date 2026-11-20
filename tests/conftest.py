@@ -20,8 +20,8 @@ def config(tmp_path: Path):
     agents = tuple(
         Agent(
             agent,
-            f"{agent}@example.test",
-            agent.title(),
+            f"assistant-{agent[-1]}@example.test",
+            f"Assistant {agent[-1].upper()}",
             "mcp_event" if agent == "agent_a" else "webhook",
             agent,
         )
@@ -90,7 +90,7 @@ def mailbox(tmp_path):
                 "INSERT INTO agents VALUES (?,?,?,1,?)",
                 (
                     agent,
-                    f"{agent}@example.test",
+                    f"assistant-{agent[-1]}@example.test",
                     agent,
                     "mcp_event" if agent == "agent_a" else "webhook",
                 ),

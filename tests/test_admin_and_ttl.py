@@ -136,7 +136,7 @@ def test_admin_status_labels_reflect_config_read_and_ack(client):
     deposit(mailbox, text="status-display-check")
 
     page = client.get("/admin/", auth=AUTH).text
-    assert "Notifications Assistant A" in page
+    assert "Notifications MCP" in page
     assert "Notifications automatiques" in page
     assert "Configuration" in page and "Fonctionnement" in page
     assert "Notifications activées" in page

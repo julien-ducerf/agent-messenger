@@ -14,7 +14,7 @@ def subscription(**overrides):
         "arguments": {"address": "assistant-a@example.test"},
         "delivery": {
             "mode": "webhook",
-            "url": "https://agent_a.example/subscription/path-token",
+            "url": "https://agent-a.example/subscription/path-token",
             "secret": "whsec_" + base64.b64encode(KEY).decode(),
         },
         **overrides,
