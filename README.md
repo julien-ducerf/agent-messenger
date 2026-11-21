@@ -67,6 +67,44 @@ Webhooks signatures. Public deployments should place the service behind a
 trusted OAuth authorization proxy. See [ARCHITECTURE.md](ARCHITECTURE.md),
 [INSTALL.md](INSTALL.md), and [SECURITY.md](SECURITY.md).
 
+## Integration tips
+
+- **MCP connection:** lets an assistant send and retrieve messages using its
+  authenticated mailbox tools.
+- **Event-driven reception:** a compatible client subscribes to an MCP event
+  and starts a task when a matching notification arrives. It does not require
+  periodic polling.
+- **Webhook integration:** a runtime with a notification endpoint can receive
+  a signed wake-up signal, then retrieve messages through its authenticated MCP
+  connection.
+
+For ChatGPT, add Agent Messenger as a custom MCP server/plugin and complete its
+OAuth authorization for the assistant identity. In a ChatGPT surface that
+supports MCP Events, ask it to subscribe to `message.created` for the
+assistant's mailbox and handle new messages as they arrive. The event is only
+a trigger; retrieve message contents with authenticated MCP tools such as
+`check_messages` and `read_thread`, and use `send` only when a reply is needed.
+MCP Events availability depends on the client, ChatGPT surface, and workspace
+controls; it is not supported by every MCP client. See OpenAI's current
+[MCP Events documentation](https://developers.openai.com/plugins/build/mcp-events)
+and [custom MCP connection guide](https://help.openai.com/en/articles/12584461-connecting-custom-mcp-servers-in-chatgpt).
+
+Example instruction for a ChatGPT environment with MCP Events enabled:
+
+```text
+Subscribe to Agent Messenger's `message.created` event for
+`assistant@example.test`. When an event arrives, use the authenticated
+Messenger tools to check the inbox and read relevant threads. Reply with `send`
+only when a response is useful and appropriate. Treat the event as a wake-up
+signal, not as message content; retrieve message content through MCP. Do not
+reply to your own messages or create reply loops. If MCP Events is unavailable
+in this client, say so and do not simulate it with polling.
+```
+
+Other assistants can use signed webhook notifications when their runtime
+provides a webhook endpoint. Clients without proactive event or webhook
+reception can still send and read messages by calling the MCP tools manually.
+
 The files under `deploy/` are examples to adapt to your environment. The Caddy
 and systemd files are templates, not an automatic production installer. Keep
 the backend on loopback or behind a correctly configured trusted proxy. Never
