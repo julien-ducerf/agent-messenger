@@ -31,3 +31,71 @@ Before an Internet-facing deployment, verify OAuth discovery, unauthenticated
 MCP denial, protected console routes, agent-to-mailbox ACLs, webhook
 authentication, and a tested rollback on your own host. These examples are
 templates, not a turnkey hosted service.
+
+## OAuth proxy signing-key rotation
+
+In proxy mode, Agent Messenger independently validates RS256 access tokens using
+the public key configured by `proxy_public_key_credential`, then checks token
+introspection and the approved OAuth client/subject mapping. Rotating the
+authorization proxy's RSA signing key therefore requires a coordinated update
+of the backend's trusted public key. With the example systemd unit, this key is
+provided as `proxy-oauth-public-key.pem` via `LoadCredential`. Replacing its source
+file alone does not refresh the running service's credentials.
+
+### Rotation checklist
+
+Perform the rotation during a maintenance window. Follow the authorization
+proxy's supported rotation procedure and plan for existing tokens signed by
+retired keys to become unusable.
+
+1. Identify the active signing key of the correct proxy instance. Obtain its
+   public key through a trusted administrative channel and verify that it
+   matches the active proxy's published signing key (JWKS, if available). Do
+   not copy or expose the private signing key.
+2. Compare the SHA-256 fingerprints of the expected public key and the
+   Messenger credential source file. For PEM public keys, compare the canonical
+   DER SubjectPublicKeyInfo encoding rather than the raw PEM text.
+3. If the keys differ, back up the existing public credential and atomically
+   install the verified replacement, preserving ownership, permissions and
+   applicable security attributes. Do not change the channel or introspection
+   credentials unless those are independently being rotated.
+4. Restart the Messenger service to reload its systemd credentials. For the
+   example deployment, use `sudo systemctl restart agent-messenger.service`.
+   Adapt the unit name to your installation. Expect a brief interruption.
+5. Verify that the service is running and that its loaded public credential
+   matches the active signing key. If the loaded credential cannot be inspected,
+   treat that check as incomplete.
+6. Test an authorized client's MCP connection and a read-only `get_account`
+   call; verify the returned mailbox identity. Test each relevant client
+   independently and confirm that an unauthenticated MCP initialization still
+   receives HTTP 401. Observe token renewal separately.
+
+For example, to fingerprint two PEM public-key files using OpenSSL, substitute
+your actual paths:
+
+```sh
+set -o pipefail
+openssl pkey -pubin -in /path/to/verified-proxy-public-key.pem -outform DER | sha256sum
+openssl pkey -pubin -in /path/to/messenger-public-key.pem -outform DER | sha256sum
+```
+
+Run these commands in Bash and check their exit status; a failed OpenSSL
+command must not be interpreted as a valid fingerprint. The first file must
+already have been verified against the active signing key.
+
+### Troubleshooting repeated OAuth authorization
+
+If authorization and token issuance succeed but subsequent MCP requests return
+HTTP 401, a client may repeatedly initiate OAuth authorization. Before
+re-registering clients or changing mailbox ACLs, correlate proxy and backend
+logs to distinguish token issuance failures from backend authentication
+failures. Check the signing-key fingerprints and loaded credential first,
+especially after a rotation or proxy upgrade. Other possible causes include a
+channel credential mismatch, invalid token claims, failed introspection, or
+an unapproved client/subject mapping.
+
+Do not bypass signature verification, introspection, channel authentication or
+mailbox ACLs to resolve a 401. Do not restore a retired signing key merely to
+make stale tokens work. If the active signing key cannot be verified, stop and
+investigate before changing the trusted credential. Redact authorization
+codes, bearer tokens, secrets and message contents from diagnostic reports.
