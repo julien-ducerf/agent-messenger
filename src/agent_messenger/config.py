@@ -4,11 +4,12 @@ import stat
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
+from threading import Lock
+from time import monotonic
 from urllib.parse import urlsplit
 
 from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
-from cryptography.hazmat.primitives.serialization import load_pem_public_key
+import jwt
 
 from .delivery import Destination
 from .storage import Storage
@@ -39,10 +40,31 @@ class Agent:
     oauth_subject: str | None = None
 
 
+class _RateLimitedPyJWKClient(jwt.PyJWKClient):
+    def __init__(self, uri, *, min_fetch_interval=30, **kwargs):
+        super().__init__(uri, **kwargs)
+        self._min_fetch_interval = min_fetch_interval
+        self._fetch_attempt_lock = Lock()
+        self._last_fetch_attempt = None
+
+    def fetch_data(self):
+        # PyJWKClient cools down after successful fetches; also bound retries
+        # when the endpoint is failing, without falling back to an old pin.
+        with self._fetch_attempt_lock:
+            now = monotonic()
+            if (
+                self._last_fetch_attempt is not None
+                and now - self._last_fetch_attempt < self._min_fetch_interval
+            ):
+                raise jwt.PyJWKClientError("JWKS fetch rate limited")
+            self._last_fetch_attempt = now
+            return super().fetch_data()
+
+
 @dataclass(frozen=True)
 class ProxyOAuth:
     issuer: str
-    public_key: RSAPublicKey = field(repr=False)
+    jwks_client: jwt.PyJWKClient = field(repr=False)
     channel_key: bytes = field(repr=False)
     introspection_port: int
     introspection_credential: bytes = field(repr=False)
@@ -170,9 +192,16 @@ def load_proxy_oauth(runtime, resource, agents, cursor_key, read):
     port = runtime["proxy_introspection_port"]
     if type(port) is not int or not 1 <= port <= 65535:
         raise ValueError("invalid loopback introspection port")
-    key = load_pem_public_key(read(runtime["proxy_public_key_credential"]))
-    if not isinstance(key, RSAPublicKey) or key.key_size < 2048:
-        raise ValueError("a pinned RSA public key of at least 2048 bits is required")
+    # MCP Auth Proxy serves JWKS and introspection on the same loopback port.
+    jwks_client = _RateLimitedPyJWKClient(
+        f"http://127.0.0.1:{port}/.well-known/jwks.json",
+        cache_keys=False,
+        cache_jwk_set=True,
+        lifespan=300,
+        timeout=2,
+        cooldown_duration=30,
+        min_fetch_interval=30,
+    )
     channel = read(runtime["proxy_channel_credential"])
     if not re.fullmatch(rb"[A-Za-z0-9_-]{43,128}", channel) or channel == cursor_key:
         raise ValueError(
@@ -189,7 +218,7 @@ def load_proxy_oauth(runtime, resource, agents, cursor_key, read):
         raise ValueError(
             "a separate confidential introspection client credential is required"
         )
-    return ProxyOAuth(resource, key, channel, port, credential)
+    return ProxyOAuth(resource, jwks_client, channel, port, credential)
 
 
 def load_config(path):

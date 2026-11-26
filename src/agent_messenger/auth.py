@@ -87,9 +87,12 @@ class Auth:
         if not hmac.compare_digest(channel, proxy.channel_key):
             return None
         try:
+            signing_key = await asyncio.to_thread(
+                proxy.jwks_client.get_signing_key_from_jwt, token
+            )
             claims = jwt.decode(
                 token,
-                proxy.public_key,
+                signing_key.key,
                 algorithms=["RS256"],
                 audience=proxy.issuer,
                 issuer=proxy.issuer,
@@ -97,6 +100,7 @@ class Auth:
             )
         except (
             jwt.InvalidTokenError,
+            jwt.PyJWKClientError,
             TypeError,
             ValueError,
             OverflowError,

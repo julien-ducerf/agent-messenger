@@ -1,5 +1,9 @@
+import base64
+import json
+import threading
 from dataclasses import replace
-from time import time
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from time import monotonic, time
 
 import jwt
 import pytest
@@ -8,11 +12,54 @@ from starlette.testclient import TestClient
 
 from agent_messenger import auth
 from agent_messenger.app import build_app
-from agent_messenger.config import ProxyOAuth, load_proxy_oauth
+from agent_messenger.config import load_proxy_oauth
 
 ISSUER = "https://messenger.example/"
 CHANNEL = "staging-shared-channel-" + "c" * 32
 OWNER = "shared-OIDC-subject"
+
+
+def _base64url_uint(value):
+    encoded = value.to_bytes((value.bit_length() + 7) // 8, "big")
+    return base64.urlsafe_b64encode(encoded).rstrip(b"=").decode("ascii")
+
+
+def _rsa_jwk(private_key, kid):
+    numbers = private_key.public_key().public_numbers()
+    return {
+        "kty": "RSA",
+        "use": "sig",
+        "alg": "RS256",
+        "kid": kid,
+        "n": _base64url_uint(numbers.n),
+        "e": _base64url_uint(numbers.e),
+    }
+
+
+class _JWKSHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.server.fetch_count += 1
+        if self.server.failure_status is not None:
+            self.send_response(self.server.failure_status)
+            self.end_headers()
+            return
+        body = json.dumps({"keys": self.server.keys}).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, format, *args):
+        pass
+
+
+class _JWKSServer(ThreadingHTTPServer):
+    def __init__(self):
+        self.keys = []
+        self.fetch_count = 0
+        self.failure_status = None
+        super().__init__(("127.0.0.1", 0), _JWKSHandler)
 
 
 @pytest.fixture(scope="module")
@@ -21,19 +68,53 @@ def signer():
 
 
 @pytest.fixture
-def oauth(config, signer, monkeypatch):
+def jwks_server(signer):
+    server = _JWKSServer()
+    server.keys = [_rsa_jwk(signer, "key-a")]
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    yield server
+    server.shutdown()
+    server.server_close()
+    thread.join(timeout=1)
+
+
+@pytest.fixture
+def oauth(config, signer, jwks_server, monkeypatch):
     agents = tuple(
         replace(agent, oauth_client_id="client-" + agent.id, oauth_subject=OWNER)
         for agent in config.agents
     )
-    proxy = ProxyOAuth(
-        ISSUER, signer.public_key(), CHANNEL.encode(), 18766, b"inspector:" + b"x" * 32
+    runtime = {
+        "proxy_introspection_port": jwks_server.server_port,
+        "proxy_public_key_credential": "legacy-key-is-ignored",
+        "proxy_channel_credential": "channel-key",
+        "proxy_introspection_credential": "introspection-client",
+    }
+    credentials = {
+        "channel-key": CHANNEL.encode(),
+        "introspection-client": b"inspector:" + b"x" * 32,
+    }
+    proxy = load_proxy_oauth(
+        runtime,
+        ISSUER,
+        agents,
+        b"cursor-" + b"0" * 32,
+        lambda name: credentials[name],
     )
     config = replace(config, agents=agents, local_tokens={}, proxy_oauth=proxy)
     issued = {}
     calls = []
 
-    def token(agent, *, signing_key=None, response_fields=None, **overrides):
+    def token(
+        agent,
+        *,
+        signing_key=None,
+        kid="key-a",
+        algorithm="RS256",
+        response_fields=None,
+        **overrides,
+    ):
         now = int(time())
         claims = {
             "iss": ISSUER,
@@ -45,7 +126,13 @@ def oauth(config, signer, monkeypatch):
             "jti": agent,
             **overrides,
         }
-        access_token = jwt.encode(claims, signing_key or signer, algorithm="RS256")
+        headers = None if kid is None else {"kid": kid}
+        access_token = jwt.encode(
+            claims,
+            signing_key or signer,
+            algorithm=algorithm,
+            headers=headers,
+        )
         issued[access_token] = {
             **{key: claims[key] for key in ("aud", "sub", "iat", "exp")},
             "active": True,
@@ -66,7 +153,7 @@ def oauth(config, signer, monkeypatch):
         base_url="http://localhost",
         headers={"accept": "application/json, text/event-stream"},
     ) as client:
-        yield client, token, calls
+        yield client, token, calls, proxy
 
 
 def call(client, token=None, channel=CHANNEL, **params):
@@ -93,7 +180,7 @@ def content(response):
 
 
 def test_same_oauth_subject_with_three_distinct_client_ids(oauth):
-    client, token, _ = oauth
+    client, token, _, _ = oauth
     for agent in ("agent_a", "agent_b", "agent_c"):
         result = content(call(client, token(agent), headers=[("X-Agent-Id", "other")]))
         assert (
@@ -152,7 +239,7 @@ def test_same_oauth_subject_with_three_distinct_client_ids(oauth):
 
 
 def test_direct_loopback_and_invalid_jwt_are_rejected_before_introspection(oauth):
-    client, token, calls = oauth
+    client, token, calls, _ = oauth
     valid = token("agent_b")
     other_key = generate_private_key(public_exponent=65537, key_size=2048)
     for response in (
@@ -161,6 +248,15 @@ def test_direct_loopback_and_invalid_jwt_are_rejected_before_introspection(oauth
         call(client, valid, channel="unknown"),
         call(client, valid, headers=[("X-Agent-Messenger-Proxy-Channel", CHANNEL)]),
         call(client, token("agent_b", signing_key=other_key)),
+        call(
+            client,
+            token(
+                "agent_b",
+                signing_key=b"not-an-rsa-key-" + b"x" * 32,
+                algorithm="HS256",
+            ),
+        ),
+        call(client, token("agent_b", kid=None)),
         call(client, token("agent_b", exp=int(time()) - 1)),
         call(client, token("agent_b", nbf=int(time()) + 30)),
         call(client, token("agent_b", iat=int(time()) + 30)),
@@ -173,7 +269,7 @@ def test_direct_loopback_and_invalid_jwt_are_rejected_before_introspection(oauth
 
 
 def test_introspection_is_mandatory_and_jwt_client_claim_is_ignored(oauth):
-    client, token, _ = oauth
+    client, token, _, _ = oauth
     denied = (
         token("unknown", client_id="client-agent_b", azp="client-agent_b"),
         token("agent_c", sub="unknown"),
@@ -191,9 +287,74 @@ def test_introspection_is_mandatory_and_jwt_client_claim_is_ignored(oauth):
 
 
 def test_introspection_request_time_can_differ_from_signed_issuance_time(oauth):
-    client, token, _ = oauth
+    client, token, _, _ = oauth
     issued = token("agent_b", response_fields={"iat": int(time()) - 60})
     assert content(call(client, issued))["addresses"][0]["address"] == "assistant-b@example.test"
+
+
+def test_rotation_refreshes_jwks_and_selects_new_kid_after_cooldown(
+    oauth, jwks_server
+):
+    client, token, calls, proxy = oauth
+    assert content(call(client, token("agent_b")))["addresses"][0]["address"] == (
+        "assistant-b@example.test"
+    )
+    assert jwks_server.fetch_count == 1
+
+    rotated_signer = generate_private_key(public_exponent=65537, key_size=2048)
+    jwks_server.keys = [_rsa_jwk(rotated_signer, "key-b")]
+    rotated_token = token("agent_b", signing_key=rotated_signer, kid="key-b")
+    introspections_before = len(calls)
+
+    # An unknown kid is rejected during PyJWKClient's cooldown, not accepted
+    # using a different key or by skipping signature verification.
+    assert call(client, rotated_token).status_code == 401
+    assert jwks_server.fetch_count == 1
+    assert len(calls) == introspections_before
+
+    past_cooldown = monotonic() - 31
+    proxy.jwks_client._last_successful_fetch = past_cooldown
+    proxy.jwks_client._last_fetch_attempt = past_cooldown
+    assert content(call(client, rotated_token))["addresses"][0]["address"] == (
+        "assistant-b@example.test"
+    )
+    assert jwks_server.fetch_count == 2
+    assert len(calls) == introspections_before + 1
+
+
+def test_jwks_outage_fails_closed_and_failed_fetches_are_rate_limited(
+    oauth, jwks_server
+):
+    client, token, calls, proxy = oauth
+    valid = token("agent_b")
+    assert content(call(client, valid))["addresses"][0]["address"] == (
+        "assistant-b@example.test"
+    )
+    assert jwks_server.fetch_count == 1
+
+    # A cached, still-valid key can verify tokens while the JWKS endpoint is
+    # unavailable; an unlisted kid must still fail closed.
+    jwks_server.failure_status = 503
+    assert content(call(client, valid))["addresses"][0]["address"] == (
+        "assistant-b@example.test"
+    )
+    assert jwks_server.fetch_count == 1
+    calls.clear()
+
+    unknown_key = generate_private_key(public_exponent=65537, key_size=2048)
+    unknown = token("agent_b", signing_key=unknown_key, kid="unknown-kid")
+    past_cooldown = monotonic() - 31
+    proxy.jwks_client._last_successful_fetch = past_cooldown
+    proxy.jwks_client._last_fetch_attempt = past_cooldown
+
+    assert call(client, unknown).status_code == 401
+    assert jwks_server.fetch_count == 2
+    second_unknown = token(
+        "agent_b", signing_key=unknown_key, kid="another-unknown-kid"
+    )
+    assert call(client, second_unknown).status_code == 401
+    assert jwks_server.fetch_count == 2
+    assert not calls
 
 
 def test_oauth_configuration_rejects_reusing_a_client_id(config):
