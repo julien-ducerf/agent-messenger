@@ -120,7 +120,8 @@ class Auth:
             or claims["exp"] <= time()
         ):
             return None
-        # v2.10.2 includes the OAuth client ID in introspection, not in the JWT.
+        # The proxy exposes the OAuth client ID through introspection.
+        # Use mcp-auth-proxy v2.10.3 or later (v2.11.0 validated).
         return self.oauth_principals.get((result["client_id"], claims["sub"]))
 
     def admin(self, scope):
