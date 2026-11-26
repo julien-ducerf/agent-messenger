@@ -32,6 +32,16 @@ MCP denial, protected console routes, agent-to-mailbox ACLs, webhook
 authentication, and a tested rollback on your own host. These examples are
 templates, not a turnkey hosted service.
 
+## OAuth proxy version requirement
+
+Use [mcp-auth-proxy](https://github.com/sigbit/mcp-auth-proxy) v2.10.3 or
+later, with v2.11.0 as a validated deployment reference. Prefer a currently
+maintained release after compatibility and security checks. Do not deploy
+v2.10.2: it has an authentication bypass fixed in
+[v2.10.3](https://github.com/sigbit/mcp-auth-proxy/releases/tag/v2.10.3).
+Existing deployments on affected versions should upgrade and review potentially
+issued tokens and the need for coordinated credential rotation.
+
 ## OAuth proxy signing-key rotation
 
 In proxy mode, Agent Messenger independently validates RS256 access tokens using
