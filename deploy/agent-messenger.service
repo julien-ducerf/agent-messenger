@@ -11,7 +11,6 @@ WorkingDirectory=/opt/agent-messenger
 Environment=AGENT_MESSENGER_CONFIG=/etc/agent-messenger/config.toml
 LoadCredential=cursor-key:/etc/agent-messenger/credentials/cursor-key
 LoadCredential=encryption-key:/etc/agent-messenger/credentials/encryption-key
-LoadCredential=proxy-oauth-public-key.pem:/etc/agent-messenger/credentials/proxy-oauth-public-key.pem
 LoadCredential=proxy-channel-key:/etc/agent-messenger/credentials/proxy-channel-key
 LoadCredential=proxy-introspection-client:/etc/agent-messenger/credentials/proxy-introspection-client
 LoadCredential=admin-password:/etc/agent-messenger/credentials/admin-password

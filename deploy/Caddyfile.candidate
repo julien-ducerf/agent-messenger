@@ -8,7 +8,8 @@
 }
 
 messenger.example.org {
-	# Le proxy v2.10.2 annonce l’origine HTTPS comme ressource OAuth.
+	# Le proxy annonce l’origine HTTPS comme ressource OAuth.
+	# Utiliser mcp-auth-proxy v2.10.3 au minimum ; v2.11.0 validée.
 	handle / {
 		rewrite * /mcp
 		reverse_proxy 127.0.0.1:18766 {

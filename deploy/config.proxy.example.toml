@@ -5,7 +5,6 @@ resource_uri = "https://messenger.example.org/"
 allowed_hosts = ["messenger.example.org", "127.0.0.1", "127.0.0.1:*", "localhost:*"]
 allowed_origins = []
 proxy_introspection_port = 18766
-proxy_public_key_credential = "proxy-oauth-public-key.pem"
 proxy_channel_credential = "proxy-channel-key"
 proxy_introspection_credential = "proxy-introspection-client"
 cursor_credential = "cursor-key"

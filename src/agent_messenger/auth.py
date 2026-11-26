@@ -87,9 +87,12 @@ class Auth:
         if not hmac.compare_digest(channel, proxy.channel_key):
             return None
         try:
+            signing_key = await asyncio.to_thread(
+                proxy.jwks_client.get_signing_key_from_jwt, token
+            )
             claims = jwt.decode(
                 token,
-                proxy.public_key,
+                signing_key.key,
                 algorithms=["RS256"],
                 audience=proxy.issuer,
                 issuer=proxy.issuer,
@@ -97,6 +100,7 @@ class Auth:
             )
         except (
             jwt.InvalidTokenError,
+            jwt.PyJWKClientError,
             TypeError,
             ValueError,
             OverflowError,
@@ -120,7 +124,8 @@ class Auth:
             or claims["exp"] <= time()
         ):
             return None
-        # v2.10.2 includes the OAuth client ID in introspection, not in the JWT.
+        # The proxy exposes the OAuth client ID through introspection.
+        # Use mcp-auth-proxy v2.10.3 or later (v2.11.0 validated).
         return self.oauth_principals.get((result["client_id"], claims["sub"]))
 
     def admin(self, scope):
